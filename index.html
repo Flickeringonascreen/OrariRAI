@@ -625,33 +625,40 @@
         function extractWeekDates(text) {
             const lines = text.split('\n');
             
-            // Look for pattern: DD/MM/YYYY DD/MM/YYYY (with or without spaces around it)
-            // This appears near "PERIODO DI RIFERIMENTO"
-            for (const line of lines) {
-                // Try to find two dates in DD/MM/YYYY format
-                const match = line.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2})\/(\d{2})\/(\d{4})/);
+            // Look for "PERIODO DI RIFERIMENTO" and extract dates from the same line or nearby
+            const periodoIndex = text.indexOf('PERIODO DI RIFERIMENTO');
+            if (periodoIndex !== -1) {
+                // Extract text around this marker (from the marker to 300 chars after)
+                const chunk = text.substring(periodoIndex, periodoIndex + 300);
+                
+                // Try multiple patterns:
+                // Pattern 1: DD/MM/YYYY - DD/MM/YYYY (with dash and spaces)
+                let match = chunk.match(/(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})/);
+                
+                // Pattern 2: DD/MM/YYYY DD/MM/YYYY (without dash, just spaces)
+                if (!match) {
+                    match = chunk.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2})\/(\d{2})\/(\d{4})/);
+                }
+                
                 if (match) {
                     const startDay = parseInt(match[1]);
                     const startMonth = parseInt(match[2]);
                     const year = parseInt(match[3]);
                     
-                    log(`✓ Found week dates: ${match[0]}`);
+                    log(`✓ Found week dates: ${match[1]}/${match[2]}/${match[3]} - ${match[4]}/${match[5]}/${match[6]}`);
                     return generateWeekDates(startDay, startMonth, year);
                 }
             }
             
-            // Alternative: Look for dates near "PERIODO DI RIFERIMENTO"
-            const periodoIndex = text.indexOf('PERIODO DI RIFERIMENTO');
-            if (periodoIndex !== -1) {
-                // Extract text around this marker (500 chars before and after)
-                const chunk = text.substring(Math.max(0, periodoIndex - 500), periodoIndex + 200);
-                const match = chunk.match(/(\d{2})\/(\d{2})\/(\d{4})\s*-?\s*(\d{2})\/(\d{2})\/(\d{4})/);
+            // Fallback: search entire document for two consecutive dates
+            for (const line of lines) {
+                const match = line.match(/(\d{2})\/(\d{2})\/(\d{4})\s*-?\s*(\d{2})\/(\d{2})\/(\d{4})/);
                 if (match) {
                     const startDay = parseInt(match[1]);
                     const startMonth = parseInt(match[2]);
                     const year = parseInt(match[3]);
                     
-                    log(`✓ Found week dates near PERIODO: ${match[0]}`);
+                    log(`✓ Found week dates in document: ${match[0]}`);
                     return generateWeekDates(startDay, startMonth, year);
                 }
             }
